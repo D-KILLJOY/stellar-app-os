@@ -36,7 +36,7 @@ const buttonVariants = cva(
       },
     },
     defaultVariants: {
-      variant: "default",
+      variant: "purple",
       size: "default",
     },
   }
@@ -44,7 +44,7 @@ const buttonVariants = cva(
 
 function Button({
   className,
-  variant = "default",
+  variant = "purple",
   size = "default",
   asChild = false,
   ...props
