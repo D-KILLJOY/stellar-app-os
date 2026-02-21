@@ -1,23 +1,32 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState, useEffect, useMemo } from "react";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { PaymentMintingStep } from "@/components/organisms/PaymentMintingStep/PaymentMintingStep";
+import { ProgressStepper } from "@/components/molecules/ProgressStepper/ProgressStepper";
 import { Text } from "@/components/atoms/Text";
 import { useWalletContext } from "@/contexts/WalletContext";
+import {
+  buildPurchaseFlowSteps,
+  getCurrentStepFromPath,
+  getCompletedSteps,
+} from "@/lib/utils/purchaseFlow";
 import type { CreditSelectionState } from "@/lib/types/carbon";
 
 function PaymentContent() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const { wallet } = useWalletContext();
   const [selection, setSelection] = useState<CreditSelectionState | null>(null);
+  const [selectionParam, setSelectionParam] = useState<string | null>(null);
 
   useEffect(() => {
-    const selectionParam = searchParams.get("selection");
-    if (selectionParam) {
+    const param = searchParams.get("selection");
+    if (param) {
+      setSelectionParam(param);
       try {
-        const parsed = JSON.parse(decodeURIComponent(selectionParam)) as CreditSelectionState;
+        const parsed = JSON.parse(decodeURIComponent(param)) as CreditSelectionState;
         setSelection(parsed);
       } catch (err) {
         console.error("Failed to parse selection:", err);
@@ -33,10 +42,10 @@ function PaymentContent() {
     console.log("Transaction completed:", transactionHash);
     // Navigate to confirmation page with transaction details
     if (selection && wallet) {
-      const selectionParam = encodeURIComponent(JSON.stringify(selection));
+      const param = encodeURIComponent(JSON.stringify(selection));
       const networkParam = wallet.network;
       router.push(
-        `/credits/purchase/confirmation?selection=${selectionParam}&hash=${transactionHash}&network=${networkParam}`
+        `/credits/purchase/confirmation?selection=${param}&hash=${transactionHash}&network=${networkParam}`
       );
     }
   };
@@ -45,9 +54,23 @@ function PaymentContent() {
     console.error("Transaction error:", error);
   };
 
+  const currentStepId = getCurrentStepFromPath(pathname);
+  const completedSteps = getCompletedSteps(
+    currentStepId,
+    !!selection,
+    !!wallet?.isConnected
+  );
+  const steps = useMemo(
+    () => buildPurchaseFlowSteps(currentStepId, completedSteps, selectionParam),
+    [currentStepId, completedSteps, selectionParam]
+  );
+
   if (!selection || !wallet?.isConnected) {
     return (
       <div className="container mx-auto px-4 py-8 max-w-4xl">
+        <div className="mb-8">
+          <ProgressStepper steps={steps} />
+        </div>
         <div className="text-center">
           <Text variant="h3" as="h2" className="mb-2">
             Loading...
@@ -59,6 +82,9 @@ function PaymentContent() {
 
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <div className="mb-8">
+        <ProgressStepper steps={steps} />
+      </div>
       <PaymentMintingStep
         selection={selection}
         wallet={wallet}

@@ -1,14 +1,21 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { Suspense, useState, useEffect, useMemo } from "react";
+import { useRouter, useSearchParams, usePathname } from "next/navigation";
 import { WalletConnectionStep } from "@/components/organisms/WalletConnectionStep/WalletConnectionStep";
+import { ProgressStepper } from "@/components/molecules/ProgressStepper/ProgressStepper";
 import { Button } from "@/components/atoms/Button";
 import { Text } from "@/components/atoms/Text";
+import {
+  buildPurchaseFlowSteps,
+  getCurrentStepFromPath,
+  getCompletedSteps,
+} from "@/lib/utils/purchaseFlow";
 import type { WalletConnection } from "@/lib/types/wallet";
 
 function WalletContent() {
   const router = useRouter();
+  const pathname = usePathname();
   const searchParams = useSearchParams();
   const [wallet, setWallet] = useState<WalletConnection | null>(null);
   const [selectionParam, setSelectionParam] = useState<string | null>(null);
@@ -34,8 +41,22 @@ function WalletContent() {
     }
   };
 
+  const currentStepId = getCurrentStepFromPath(pathname);
+  const completedSteps = getCompletedSteps(
+    currentStepId,
+    !!selectionParam,
+    !!wallet?.isConnected
+  );
+  const steps = useMemo(
+    () => buildPurchaseFlowSteps(currentStepId, completedSteps, selectionParam),
+    [currentStepId, completedSteps, selectionParam]
+  );
+
   return (
     <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <div className="mb-8">
+        <ProgressStepper steps={steps} />
+      </div>
       <WalletConnectionStep onConnectionChange={handleConnectionChange} />
       {wallet?.isConnected && (
         <div className="flex justify-end pt-6">
