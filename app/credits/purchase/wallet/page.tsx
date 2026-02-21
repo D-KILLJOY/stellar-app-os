@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { WalletConnectionStep } from "@/components/organisms/WalletConnectionStep/WalletConnectionStep";
 import { Button } from "@/components/atoms/Button";
+import { Text } from "@/components/atoms/Text";
 import type { WalletConnection } from "@/lib/types/wallet";
 
-export default function WalletPage() {
+function WalletContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [wallet, setWallet] = useState<WalletConnection | null>(null);
@@ -49,5 +50,23 @@ export default function WalletPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function WalletPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
+          <div className="text-center">
+            <Text variant="h3" as="h2" className="mb-2">
+              Loading...
+            </Text>
+          </div>
+        </div>
+      }
+    >
+      <WalletContent />
+    </Suspense>
   );
 }

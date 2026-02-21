@@ -4,8 +4,8 @@ import {
   Asset,
   Operation,
   Memo,
-  Server,
 } from "@stellar/stellar-sdk";
+import { Horizon } from "@stellar/stellar-sdk";
 import type { NetworkType } from "@/lib/types/wallet";
 import type { CreditSelectionState } from "@/lib/types/carbon";
 
@@ -47,7 +47,7 @@ export async function buildPaymentTransaction(
       ? "https://horizon.stellar.org"
       : "https://horizon-testnet.stellar.org";
 
-  const server = new Server(horizonUrl);
+  const server = new Horizon.Server(horizonUrl);
   const sourceAccount = await server.loadAccount(sourcePublicKey);
 
   const usdcAsset = getUsdcAsset(network);

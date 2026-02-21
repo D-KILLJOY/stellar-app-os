@@ -1,13 +1,13 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { Suspense, useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { PaymentMintingStep } from "@/components/organisms/PaymentMintingStep/PaymentMintingStep";
 import { Text } from "@/components/atoms/Text";
 import { useWalletContext } from "@/contexts/WalletContext";
 import type { CreditSelectionState } from "@/lib/types/carbon";
 
-export default function PaymentPage() {
+function PaymentContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { wallet } = useWalletContext();
@@ -58,5 +58,23 @@ export default function PaymentPage() {
         onError={handleError}
       />
     </div>
+  );
+}
+
+export default function PaymentPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="container mx-auto px-4 py-8 max-w-4xl">
+          <div className="text-center">
+            <Text variant="h3" as="h2" className="mb-2">
+              Loading...
+            </Text>
+          </div>
+        </div>
+      }
+    >
+      <PaymentContent />
+    </Suspense>
   );
 }
