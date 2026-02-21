@@ -22,14 +22,22 @@ export async function subscribeToPushNotifications(): Promise<PushSubscription |
     return null;
   }
 
+  // Check if VAPID key is available
+  const vapidKey = typeof window !== 'undefined' 
+    ? (window as typeof window & { ENV?: { NEXT_PUBLIC_VAPID_PUBLIC_KEY?: string } }).ENV?.NEXT_PUBLIC_VAPID_PUBLIC_KEY
+    : undefined;
+
+  if (!vapidKey) {
+    console.warn('VAPID public key not configured');
+    return null;
+  }
+
   try {
     const registration = await navigator.serviceWorker.ready;
     
     const subscription = await registration.pushManager.subscribe({
       userVisibleOnly: true,
-      applicationServerKey: urlBase64ToUint8Array(
-        process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY || ''
-      ),
+      applicationServerKey: urlBase64ToUint8Array(vapidKey) as BufferSource,
     });
 
     return subscription;
@@ -72,7 +80,8 @@ function urlBase64ToUint8Array(base64String: string): Uint8Array {
     outputArray[i] = rawData.charCodeAt(i);
   }
 
-  return outputArray;
+  // Return as BufferSource compatible type
+  return new Uint8Array(outputArray.buffer);
 }
 
 export function showNotification(
