@@ -77,16 +77,16 @@ interface QRScannerState {
   // Camera state
   cameraStatus: 'idle' | 'requesting' | 'active' | 'denied' | 'error';
   cameraStream: MediaStream | null;
-  
+
   // Scanning state
   scanStatus: 'idle' | 'scanning' | 'processing' | 'success' | 'error';
   scanResult: string | null;
-  
+
   // UI state
   mode: 'camera' | 'manual';
   isProcessing: boolean;
   error: ScanError | null;
-  
+
   // Retry state
   retryCount: number;
   lastScanTime: number;
@@ -107,24 +107,24 @@ graph TD
     B -->|Granted| C[Initialize Camera]
     B -->|Denied| D[Show Manual Input]
     B -->|Prompt| E[Request Permission]
-    
+
     C --> F[Start Scanning Loop]
     F --> G{QR Code Detected?}
     G -->|Yes| H[Extract Data]
     G -->|No| F
-    
+
     H --> I{Validate Data}
     I -->|Valid Stellar Address| J[Return Address]
     I -->|Valid URL| K[Return URL]
     I -->|Invalid| L[Show Error]
-    
+
     L --> M{Retry Available?}
     M -->|Yes| F
     M -->|No| D
-    
+
     E -->|Granted| C
     E -->|Denied| D
-    
+
     D --> N[Manual Input]
     N --> O{Validate Input}
     O -->|Valid| P[Return Data]
@@ -139,31 +139,31 @@ graph TD
 export interface QRCodeScannerProps {
   /** Callback when valid data is scanned/entered */
   onScan: (data: ScanResult) => void;
-  
+
   /** Callback when scanner is closed */
   onClose?: () => void;
-  
+
   /** Expected data type to scan */
   expectedType?: 'address' | 'url' | 'both';
-  
+
   /** Initial mode */
   initialMode?: 'camera' | 'manual';
-  
+
   /** Custom error messages */
   errorMessages?: Partial<ErrorMessages>;
-  
+
   /** Enable haptic feedback */
   enableHaptics?: boolean;
-  
+
   /** Scan rate in FPS */
   scanRate?: number;
-  
+
   /** Timeout for inactive camera (ms) */
   inactivityTimeout?: number;
-  
+
   /** Maximum retry attempts */
   maxRetries?: number;
-  
+
   /** Custom class name */
   className?: string;
 }
@@ -265,15 +265,15 @@ export interface CameraManager {
   stop(): void;
   pause(): void;
   resume(): void;
-  
+
   // State
   getStatus(): CameraStatus;
   getStream(): MediaStream | null;
-  
+
   // Permissions
   requestPermission(): Promise<PermissionState>;
   checkPermission(): Promise<PermissionState>;
-  
+
   // Configuration
   setConstraints(constraints: MediaStreamConstraints): void;
   getCapabilities(): MediaTrackCapabilities | null;
@@ -313,7 +313,7 @@ export interface VerificationURL {
 }
 
 // Error Types
-export type ErrorType = 
+export type ErrorType =
   | 'camera-permission-denied'
   | 'camera-init-failed'
   | 'camera-stream-error'
@@ -355,7 +355,7 @@ export interface ScannerConfig {
 ### State Machine
 
 ```typescript
-export type ScannerPhase = 
+export type ScannerPhase =
   | 'initializing'
   | 'requesting-permission'
   | 'camera-active'
@@ -373,7 +373,7 @@ export interface ScannerStateMachine {
   getAvailableActions(): ScannerAction[];
 }
 
-export type ScannerAction = 
+export type ScannerAction =
   | 'start-camera'
   | 'stop-camera'
   | 'retry-scan'
@@ -382,7 +382,6 @@ export type ScannerAction =
   | 'submit-manual'
   | 'close';
 ```
-
 
 ## Implementation Details
 
@@ -396,37 +395,34 @@ class CameraService {
   private scanner: Html5Qrcode | null = null;
   private stream: MediaStream | null = null;
   private isScanning = false;
-  
+
   async initialize(elementId: string): Promise<void> {
     this.scanner = new Html5Qrcode(elementId);
   }
-  
+
   async start(config: CameraConfig, onScan: (data: string) => void): Promise<void> {
     if (!this.scanner) throw new Error('Scanner not initialized');
-    
+
     const qrConfig = {
       fps: config.frameRate.ideal,
       qrbox: { width: 250, height: 250 },
       aspectRatio: config.aspectRatio,
     };
-    
-    await this.scanner.start(
-      { facingMode: config.facingMode },
-      qrConfig,
-      onScan,
-      (error) => console.debug('Scan error:', error)
+
+    await this.scanner.start({ facingMode: config.facingMode }, qrConfig, onScan, (error) =>
+      console.debug('Scan error:', error)
     );
-    
+
     this.isScanning = true;
   }
-  
+
   async stop(): Promise<void> {
     if (this.scanner && this.isScanning) {
       await this.scanner.stop();
       this.isScanning = false;
     }
   }
-  
+
   async cleanup(): Promise<void> {
     await this.stop();
     if (this.scanner) {
@@ -445,11 +441,11 @@ export class StellarAddressValidator {
   private static readonly ADDRESS_LENGTH = 56;
   private static readonly ADDRESS_PREFIX = 'G';
   private static readonly VALID_CHARS = /^[A-Z2-7]+$/;
-  
+
   static validate(address: string): ValidationResult {
     // Trim whitespace
     const trimmed = address.trim();
-    
+
     // Check length
     if (trimmed.length !== this.ADDRESS_LENGTH) {
       return {
@@ -457,7 +453,7 @@ export class StellarAddressValidator {
         error: `Address must be exactly ${this.ADDRESS_LENGTH} characters`,
       };
     }
-    
+
     // Check prefix
     if (!trimmed.startsWith(this.ADDRESS_PREFIX)) {
       return {
@@ -465,7 +461,7 @@ export class StellarAddressValidator {
         error: `Address must start with '${this.ADDRESS_PREFIX}'`,
       };
     }
-    
+
     // Check character set (base32)
     if (!this.VALID_CHARS.test(trimmed)) {
       return {
@@ -473,7 +469,7 @@ export class StellarAddressValidator {
         error: 'Address contains invalid characters',
       };
     }
-    
+
     // Validate checksum using Stellar SDK
     try {
       const isValid = StrKey.isValidEd25519PublicKey(trimmed);
@@ -499,11 +495,11 @@ export class StellarAddressValidator {
 export class VerificationURLValidator {
   private static readonly ALLOWED_PROTOCOLS = ['https:', 'http:'];
   private static readonly URL_PATTERN = /^https?:\/\/.+/i;
-  
+
   static validate(urlString: string): ValidationResult {
     try {
       const url = new URL(urlString);
-      
+
       // Check protocol
       if (!this.ALLOWED_PROTOCOLS.includes(url.protocol)) {
         return {
@@ -511,7 +507,7 @@ export class VerificationURLValidator {
           error: 'URL must use HTTP or HTTPS protocol',
         };
       }
-      
+
       // Check domain exists
       if (!url.hostname) {
         return {
@@ -519,7 +515,7 @@ export class VerificationURLValidator {
           error: 'URL must have a valid domain',
         };
       }
-      
+
       return {
         isValid: true,
         normalized: url.toString(),
@@ -531,16 +527,12 @@ export class VerificationURLValidator {
       };
     }
   }
-  
+
   static isVerificationURL(url: string): boolean {
     // Check if URL contains verification-related paths
-    const verificationPatterns = [
-      /\/verify\//i,
-      /\/certificate\//i,
-      /\/retirement\//i,
-    ];
-    
-    return verificationPatterns.some(pattern => pattern.test(url));
+    const verificationPatterns = [/\/verify\//i, /\/certificate\//i, /\/retirement\//i];
+
+    return verificationPatterns.some((pattern) => pattern.test(url));
   }
 }
 ```
@@ -556,27 +548,30 @@ export function useDebouncedScan(
   const timeoutRef = useRef<NodeJS.Timeout>();
   const lastScanRef = useRef<string>('');
   const lastTimeRef = useRef<number>(0);
-  
-  return useCallback((data: string) => {
-    const now = Date.now();
-    
-    // Prevent duplicate scans within delay period
-    if (data === lastScanRef.current && now - lastTimeRef.current < delay) {
-      return;
-    }
-    
-    // Clear existing timeout
-    if (timeoutRef.current) {
-      clearTimeout(timeoutRef.current);
-    }
-    
-    // Set new timeout
-    timeoutRef.current = setTimeout(() => {
-      lastScanRef.current = data;
-      lastTimeRef.current = now;
-      callback(data);
-    }, delay);
-  }, [callback, delay]);
+
+  return useCallback(
+    (data: string) => {
+      const now = Date.now();
+
+      // Prevent duplicate scans within delay period
+      if (data === lastScanRef.current && now - lastTimeRef.current < delay) {
+        return;
+      }
+
+      // Clear existing timeout
+      if (timeoutRef.current) {
+        clearTimeout(timeoutRef.current);
+      }
+
+      // Set new timeout
+      timeoutRef.current = setTimeout(() => {
+        lastScanRef.current = data;
+        lastTimeRef.current = now;
+        callback(data);
+      }, delay);
+    },
+    [callback, delay]
+  );
 }
 ```
 
@@ -593,7 +588,7 @@ export function useCameraCleanup(cameraService: CameraService | null) {
       }
     };
   }, [cameraService]);
-  
+
   // Cleanup on visibility change
   useEffect(() => {
     const handleVisibilityChange = () => {
@@ -601,7 +596,7 @@ export function useCameraCleanup(cameraService: CameraService | null) {
         cameraService.stop().catch(console.error);
       }
     };
-    
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
@@ -622,37 +617,37 @@ export function useCameraConfig(): CameraConfig {
     aspectRatio: 4 / 3,
     frameRate: { ideal: 10, max: 30 },
   }));
-  
+
   useEffect(() => {
     const updateConfig = () => {
       const isPortrait = window.innerHeight > window.innerWidth;
       const isMobile = window.innerWidth < 768;
-      
+
       setConfig({
         facingMode: 'environment',
-        width: { 
-          ideal: isMobile ? 640 : 1280, 
-          max: isMobile ? 1280 : 1920 
+        width: {
+          ideal: isMobile ? 640 : 1280,
+          max: isMobile ? 1280 : 1920,
         },
-        height: { 
-          ideal: isMobile ? 480 : 720, 
-          max: isMobile ? 720 : 1080 
+        height: {
+          ideal: isMobile ? 480 : 720,
+          max: isMobile ? 720 : 1080,
         },
         aspectRatio: isPortrait ? 3 / 4 : 4 / 3,
         frameRate: { ideal: 10, max: isMobile ? 15 : 30 },
       });
     };
-    
+
     updateConfig();
     window.addEventListener('resize', updateConfig);
     window.addEventListener('orientationchange', updateConfig);
-    
+
     return () => {
       window.removeEventListener('resize', updateConfig);
       window.removeEventListener('orientationchange', updateConfig);
     };
   }, []);
-  
+
   return config;
 }
 ```
@@ -692,22 +687,19 @@ export const scannerVariants = cva(
   }
 );
 
-export const viewfinderVariants = cva(
-  'absolute inset-0 pointer-events-none',
-  {
-    variants: {
-      state: {
-        idle: 'border-white/50',
-        scanning: 'border-stellar-blue animate-pulse',
-        success: 'border-stellar-green',
-        error: 'border-destructive',
-      },
+export const viewfinderVariants = cva('absolute inset-0 pointer-events-none', {
+  variants: {
+    state: {
+      idle: 'border-white/50',
+      scanning: 'border-stellar-blue animate-pulse',
+      success: 'border-stellar-green',
+      error: 'border-destructive',
     },
-    defaultVariants: {
-      state: 'idle',
-    },
-  }
-);
+  },
+  defaultVariants: {
+    state: 'idle',
+  },
+});
 
 export const statusIndicatorVariants = cva(
   'flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium',
@@ -756,24 +748,23 @@ export function useScannerKeyboard(
       if (event.key === 'Escape') {
         onClose();
       }
-      
+
       // M to toggle mode
       if (event.key === 'm' || event.key === 'M') {
         onToggleMode();
       }
-      
+
       // R to retry
       if (event.key === 'r' || event.key === 'R') {
         onRetry();
       }
     };
-    
+
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onToggleMode, onRetry, onClose]);
 }
 ```
-
 
 ## Correctness Properties
 
@@ -1025,6 +1016,7 @@ export interface ErrorContext {
 **Retryable**: Yes (user can grant permission in settings)
 
 **Handling Strategy**:
+
 - Display clear instructions on how to enable camera permissions
 - Provide a "Try Again" button to re-request permissions
 - Automatically fall back to manual input mode
@@ -1054,6 +1046,7 @@ const handlePermissionError = (error: PermissionError) => {
 **Retryable**: Yes (up to 3 attempts)
 
 **Handling Strategy**:
+
 - Log detailed error information for debugging
 - Display user-friendly error message
 - Provide retry button with attempt counter
@@ -1063,7 +1056,7 @@ const handlePermissionError = (error: PermissionError) => {
 ```typescript
 const handleInitError = async (error: Error, retryCount: number) => {
   console.error('Camera initialization failed:', error);
-  
+
   if (retryCount >= MAX_RETRIES) {
     setError({
       type: 'camera-init-failed',
@@ -1100,6 +1093,7 @@ const handleInitError = async (error: Error, retryCount: number) => {
 **Retryable**: Yes (immediate)
 
 **Handling Strategy**:
+
 - Display error message for 3 seconds
 - Continue scanning automatically
 - Provide specific feedback about what's wrong
@@ -1107,10 +1101,11 @@ const handleInitError = async (error: Error, retryCount: number) => {
 
 ```typescript
 const handleValidationError = (data: string, validationType: 'address' | 'url') => {
-  const errorMessage = validationType === 'address'
-    ? 'Invalid Stellar address. Address must be 56 characters starting with "G".'
-    : 'Invalid verification URL. Please scan a valid verification link.';
-  
+  const errorMessage =
+    validationType === 'address'
+      ? 'Invalid Stellar address. Address must be 56 characters starting with "G".'
+      : 'Invalid verification URL. Please scan a valid verification link.';
+
   setError({
     type: 'invalid-qr-data',
     severity: ErrorSeverity.WARNING,
@@ -1121,7 +1116,7 @@ const handleValidationError = (data: string, validationType: 'address' | 'url') 
     timestamp: Date.now(),
     details: { data, validationType },
   });
-  
+
   // Auto-clear error after 3 seconds
   setTimeout(() => setError(null), 3000);
 };
@@ -1135,6 +1130,7 @@ const handleValidationError = (data: string, validationType: 'address' | 'url') 
 **Retryable**: Yes
 
 **Handling Strategy**:
+
 - Log error details for debugging
 - Display generic error message to user
 - Continue scanning automatically
@@ -1143,7 +1139,7 @@ const handleValidationError = (data: string, validationType: 'address' | 'url') 
 ```typescript
 const handleProcessingError = (error: Error) => {
   console.error('QR processing error:', error);
-  
+
   setError({
     type: 'processing-error',
     severity: ErrorSeverity.WARNING,
@@ -1154,7 +1150,7 @@ const handleProcessingError = (error: Error) => {
     timestamp: Date.now(),
     details: error,
   });
-  
+
   // Auto-clear and resume scanning
   setTimeout(() => {
     setError(null);
@@ -1168,23 +1164,23 @@ const handleProcessingError = (error: Error) => {
 ```mermaid
 graph TD
     A[Error Occurs] --> B{Error Type}
-    
+
     B -->|Permission Denied| C[Show Instructions]
     C --> D[Offer Retry]
     D --> E{User Action}
     E -->|Retry| F[Request Permission]
     E -->|Cancel| G[Switch to Manual]
-    
+
     B -->|Init Failed| H{Retry Count < 3?}
     H -->|Yes| I[Show Retry Button]
     I --> J[Increment Counter]
     J --> K[Retry Init]
     H -->|No| G
-    
+
     B -->|Invalid QR| L[Show Error 3s]
     L --> M[Auto Clear]
     M --> N[Resume Scanning]
-    
+
     B -->|Processing Error| O[Log Error]
     O --> P[Show Generic Message]
     P --> Q[Auto Resume]
@@ -1204,7 +1200,7 @@ interface ErrorLog {
 
 class ErrorLogger {
   private logs: ErrorLog[] = [];
-  
+
   log(error: ErrorContext, state: ScannerState): void {
     const log: ErrorLog = {
       sessionId: this.getSessionId(),
@@ -1214,15 +1210,15 @@ class ErrorLogger {
       deviceInfo: this.getDeviceInfo(),
       scannerState: state,
     };
-    
+
     this.logs.push(log);
-    
+
     // Send to monitoring service for critical errors
     if (error.severity === ErrorSeverity.CRITICAL) {
       this.sendToMonitoring(log);
     }
   }
-  
+
   getErrorStats(): ErrorStats {
     return {
       total: this.logs.length,
@@ -1237,6 +1233,7 @@ class ErrorLogger {
 ### User-Facing Error Messages
 
 All error messages follow these principles:
+
 - **Clear**: Explain what went wrong in simple terms
 - **Actionable**: Tell users what they can do to fix it
 - **Contextual**: Provide platform-specific instructions when needed
@@ -1244,22 +1241,18 @@ All error messages follow these principles:
 
 ```typescript
 export const ERROR_MESSAGES: Record<ErrorType, string> = {
-  'camera-permission-denied': 
+  'camera-permission-denied':
     'Camera access is needed to scan QR codes. Please enable camera permissions in your browser settings.',
-  'camera-init-failed': 
+  'camera-init-failed':
     'Unable to start the camera. Please check that no other app is using it and try again.',
-  'camera-stream-error': 
-    'Camera connection lost. Please check your camera and try again.',
-  'invalid-qr-data': 
-    'This QR code doesn\'t contain a valid address or verification link.',
-  'invalid-stellar-address': 
+  'camera-stream-error': 'Camera connection lost. Please check your camera and try again.',
+  'invalid-qr-data': "This QR code doesn't contain a valid address or verification link.",
+  'invalid-stellar-address':
     'Invalid Stellar address. Addresses must be 56 characters starting with "G".',
-  'invalid-verification-url': 
+  'invalid-verification-url':
     'Invalid verification URL. Please scan a valid certificate verification link.',
-  'processing-timeout': 
-    'Processing took too long. Please try scanning again.',
-  'unknown-error': 
-    'Something went wrong. Please try again or use manual input.',
+  'processing-timeout': 'Processing took too long. Please try scanning again.',
+  'unknown-error': 'Something went wrong. Please try again or use manual input.',
 };
 ```
 
@@ -1272,6 +1265,7 @@ The QR Code Scanner requires comprehensive testing across multiple dimensions: u
 ### Testing Approach
 
 **Dual Testing Philosophy**:
+
 - **Unit Tests**: Validate specific examples, edge cases, and error conditions
 - **Property-Based Tests**: Verify universal properties across all inputs
 - **Integration Tests**: Validate component interactions and state management
@@ -1283,12 +1277,14 @@ The QR Code Scanner requires comprehensive testing across multiple dimensions: u
 
 **Library**: fast-check (for TypeScript/JavaScript)
 **Configuration**:
+
 - Minimum 100 iterations per property test
 - Seed-based reproducibility for failed tests
 - Shrinking enabled for minimal counterexamples
 - Timeout: 5000ms per property test
 
 **Tagging Convention**: Each property test must reference its design document property:
+
 ```typescript
 // Feature: qr-code-scanner, Property 9: Stellar Address Format Validation
 ```
@@ -1306,28 +1302,28 @@ describe('StellarAddressValidator', () => {
       expect(result.isValid).toBe(true);
       expect(result.normalized).toBe(validAddress);
     });
-    
+
     it('should reject address with wrong length', () => {
       const shortAddress = 'GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX';
       const result = StellarAddressValidator.validate(shortAddress);
       expect(result.isValid).toBe(false);
       expect(result.error).toContain('56 characters');
     });
-    
+
     it('should reject address with wrong prefix', () => {
       const wrongPrefix = 'ABRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2H';
       const result = StellarAddressValidator.validate(wrongPrefix);
       expect(result.isValid).toBe(false);
       expect(result.error).toContain('start with');
     });
-    
+
     it('should reject address with invalid characters', () => {
       const invalidChars = 'GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2!';
       const result = StellarAddressValidator.validate(invalidChars);
       expect(result.isValid).toBe(false);
       expect(result.error).toContain('invalid characters');
     });
-    
+
     it('should trim whitespace from address', () => {
       const addressWithSpaces = '  GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2H  ';
       const result = StellarAddressValidator.validate(addressWithSpaces);
@@ -1343,20 +1339,20 @@ describe('VerificationURLValidator', () => {
       const result = VerificationURLValidator.validate(validUrl);
       expect(result.isValid).toBe(true);
     });
-    
+
     it('should accept valid HTTP URL', () => {
       const httpUrl = 'http://example.com/verify';
       const result = VerificationURLValidator.validate(httpUrl);
       expect(result.isValid).toBe(true);
     });
-    
+
     it('should reject URL with invalid protocol', () => {
       const ftpUrl = 'ftp://example.com/file';
       const result = VerificationURLValidator.validate(ftpUrl);
       expect(result.isValid).toBe(false);
       expect(result.error).toContain('HTTP or HTTPS');
     });
-    
+
     it('should reject malformed URL', () => {
       const malformed = 'not-a-url';
       const result = VerificationURLValidator.validate(malformed);
@@ -1364,14 +1360,20 @@ describe('VerificationURLValidator', () => {
       expect(result.error).toContain('Invalid URL');
     });
   });
-  
+
   describe('isVerificationURL', () => {
     it('should identify verification URLs', () => {
-      expect(VerificationURLValidator.isVerificationURL('https://example.com/verify/123')).toBe(true);
-      expect(VerificationURLValidator.isVerificationURL('https://example.com/certificate/abc')).toBe(true);
-      expect(VerificationURLValidator.isVerificationURL('https://example.com/retirement/xyz')).toBe(true);
+      expect(VerificationURLValidator.isVerificationURL('https://example.com/verify/123')).toBe(
+        true
+      );
+      expect(
+        VerificationURLValidator.isVerificationURL('https://example.com/certificate/abc')
+      ).toBe(true);
+      expect(VerificationURLValidator.isVerificationURL('https://example.com/retirement/xyz')).toBe(
+        true
+      );
     });
-    
+
     it('should reject non-verification URLs', () => {
       expect(VerificationURLValidator.isVerificationURL('https://example.com/home')).toBe(false);
       expect(VerificationURLValidator.isVerificationURL('https://example.com/about')).toBe(false);
@@ -1385,24 +1387,24 @@ describe('VerificationURLValidator', () => {
 ```typescript
 describe('CameraService', () => {
   let service: CameraService;
-  
+
   beforeEach(() => {
     service = new CameraService();
   });
-  
+
   afterEach(async () => {
     await service.cleanup();
   });
-  
+
   it('should initialize scanner', async () => {
     await service.initialize('test-element');
     expect(service.scanner).toBeDefined();
   });
-  
+
   it('should throw error when starting without initialization', async () => {
     await expect(service.start(mockConfig, jest.fn())).rejects.toThrow('not initialized');
   });
-  
+
   it('should clean up resources on cleanup', async () => {
     await service.initialize('test-element');
     await service.start(mockConfig, jest.fn());
@@ -1418,31 +1420,31 @@ describe('CameraService', () => {
 ```typescript
 describe('useDebouncedScan', () => {
   jest.useFakeTimers();
-  
+
   it('should debounce identical scans within delay period', () => {
     const callback = jest.fn();
     const { result } = renderHook(() => useDebouncedScan(callback, 500));
-    
+
     result.current('test-data');
     result.current('test-data');
     result.current('test-data');
-    
+
     jest.advanceTimersByTime(500);
-    
+
     expect(callback).toHaveBeenCalledTimes(1);
     expect(callback).toHaveBeenCalledWith('test-data');
   });
-  
+
   it('should allow different scans', () => {
     const callback = jest.fn();
     const { result } = renderHook(() => useDebouncedScan(callback, 500));
-    
+
     result.current('data-1');
     jest.advanceTimersByTime(500);
-    
+
     result.current('data-2');
     jest.advanceTimersByTime(500);
-    
+
     expect(callback).toHaveBeenCalledTimes(2);
     expect(callback).toHaveBeenNthCalledWith(1, 'data-1');
     expect(callback).toHaveBeenNthCalledWith(2, 'data-2');
@@ -1469,13 +1471,11 @@ describe('Property-Based: Stellar Address Validation', () => {
           // Generate address-like string
           const address = prefix + baseString.slice(1);
           const result = StellarAddressValidator.validate(address);
-          
+
           // Property: If starts with 'G', length 56, and valid chars, should validate format
-          const hasValidFormat = 
-            address.length === 56 && 
-            address.startsWith('G') && 
-            /^[A-Z2-7]+$/.test(address);
-          
+          const hasValidFormat =
+            address.length === 56 && address.startsWith('G') && /^[A-Z2-7]+$/.test(address);
+
           if (hasValidFormat) {
             // May still fail checksum, but format should be recognized
             expect(result.error).not.toContain('length');
@@ -1487,38 +1487,35 @@ describe('Property-Based: Stellar Address Validation', () => {
       { numRuns: 100 }
     );
   });
-  
+
   // Feature: qr-code-scanner, Property 9: Stellar Address Format Validation
   it('should reject addresses with wrong length', () => {
     fc.assert(
-      fc.property(
-        fc.string({ minLength: 1, maxLength: 100 }),
-        (str) => {
-          fc.pre(str.length !== 56); // Precondition: not 56 chars
-          
-          const address = 'G' + str;
-          const result = StellarAddressValidator.validate(address);
-          
-          expect(result.isValid).toBe(false);
-          if (address.length !== 56) {
-            expect(result.error).toContain('56 characters');
-          }
+      fc.property(fc.string({ minLength: 1, maxLength: 100 }), (str) => {
+        fc.pre(str.length !== 56); // Precondition: not 56 chars
+
+        const address = 'G' + str;
+        const result = StellarAddressValidator.validate(address);
+
+        expect(result.isValid).toBe(false);
+        if (address.length !== 56) {
+          expect(result.error).toContain('56 characters');
         }
-      ),
+      }),
       { numRuns: 100 }
     );
   });
-  
+
   // Feature: qr-code-scanner, Property 9: Stellar Address Format Validation
   it('should reject addresses not starting with G', () => {
     fc.assert(
       fc.property(
-        fc.char().filter(c => c !== 'G'),
+        fc.char().filter((c) => c !== 'G'),
         fc.string({ minLength: 55, maxLength: 55 }),
         (firstChar, rest) => {
           const address = firstChar + rest;
           const result = StellarAddressValidator.validate(address);
-          
+
           expect(result.isValid).toBe(false);
         }
       ),
@@ -1542,7 +1539,7 @@ describe('Property-Based: URL Validation', () => {
         (protocol, domain, pathSegments) => {
           const url = `${protocol}://${domain}/${pathSegments.join('/')}`;
           const result = VerificationURLValidator.validate(url);
-          
+
           if (result.isValid) {
             const components = VerificationURLValidator.extractComponents(url);
             expect(components.protocol).toBe(`${protocol}:`);
@@ -1553,7 +1550,7 @@ describe('Property-Based: URL Validation', () => {
       { numRuns: 100 }
     );
   });
-  
+
   // Feature: qr-code-scanner, Property 10: Invalid Data Error Display
   it('should reject URLs with invalid protocols', () => {
     fc.assert(
@@ -1563,7 +1560,7 @@ describe('Property-Based: URL Validation', () => {
         (protocol, domain) => {
           const url = `${protocol}://${domain}`;
           const result = VerificationURLValidator.validate(url);
-          
+
           expect(result.isValid).toBe(false);
           expect(result.error).toContain('HTTP or HTTPS');
         }
@@ -1587,14 +1584,14 @@ describe('Property-Based: Scan Debouncing', () => {
         (scanData, duplicateCount) => {
           const callback = jest.fn();
           const { result } = renderHook(() => useDebouncedScan(callback, 500));
-          
+
           // Scan same data multiple times
           for (let i = 0; i < duplicateCount; i++) {
             result.current(scanData);
           }
-          
+
           jest.advanceTimersByTime(500);
-          
+
           // Property: Only first scan should be processed
           expect(callback).toHaveBeenCalledTimes(1);
           expect(callback).toHaveBeenCalledWith(scanData);
@@ -1613,51 +1610,45 @@ describe('Property-Based: Scanner State Transitions', () => {
   // Feature: qr-code-scanner, Property 1: Camera Permission State Transitions
   it('should transition to correct UI state for any permission state', () => {
     fc.assert(
-      fc.property(
-        fc.constantFrom('granted', 'denied', 'prompt'),
-        (permissionState) => {
-          const { result } = renderHook(() => useQRScanner());
-          
-          act(() => {
-            result.current.handlePermissionState(permissionState);
-          });
-          
-          // Property: Each permission state maps to specific UI state
-          if (permissionState === 'granted') {
-            expect(result.current.mode).toBe('camera');
-          } else if (permissionState === 'denied') {
-            expect(result.current.mode).toBe('manual');
-          } else {
-            expect(result.current.isLoading).toBe(true);
-          }
+      fc.property(fc.constantFrom('granted', 'denied', 'prompt'), (permissionState) => {
+        const { result } = renderHook(() => useQRScanner());
+
+        act(() => {
+          result.current.handlePermissionState(permissionState);
+        });
+
+        // Property: Each permission state maps to specific UI state
+        if (permissionState === 'granted') {
+          expect(result.current.mode).toBe('camera');
+        } else if (permissionState === 'denied') {
+          expect(result.current.mode).toBe('manual');
+        } else {
+          expect(result.current.isLoading).toBe(true);
         }
-      ),
+      }),
       { numRuns: 100 }
     );
   });
-  
+
   // Feature: qr-code-scanner, Property 15: Retry Limit Fallback
   it('should switch to manual mode after max retries', () => {
     fc.assert(
-      fc.property(
-        fc.integer({ min: 3, max: 10 }),
-        (failureCount) => {
-          const { result } = renderHook(() => useQRScanner({ maxRetries: 3 }));
-          
-          // Simulate failures
-          for (let i = 0; i < failureCount; i++) {
-            act(() => {
-              result.current.handleCameraError(new Error('Init failed'));
-            });
-          }
-          
-          // Property: After 3 failures, should be in manual mode
-          if (failureCount >= 3) {
-            expect(result.current.mode).toBe('manual');
-            expect(result.current.canRetry).toBe(false);
-          }
+      fc.property(fc.integer({ min: 3, max: 10 }), (failureCount) => {
+        const { result } = renderHook(() => useQRScanner({ maxRetries: 3 }));
+
+        // Simulate failures
+        for (let i = 0; i < failureCount; i++) {
+          act(() => {
+            result.current.handleCameraError(new Error('Init failed'));
+          });
         }
-      ),
+
+        // Property: After 3 failures, should be in manual mode
+        if (failureCount >= 3) {
+          expect(result.current.mode).toBe('manual');
+          expect(result.current.canRetry).toBe(false);
+        }
+      }),
       { numRuns: 100 }
     );
   });
@@ -1671,21 +1662,15 @@ describe('Property-Based: Resource Management', () => {
   // Feature: qr-code-scanner, Property 30: Resource Cleanup on Unmount
   it('should release camera resources on any unmount', () => {
     fc.assert(
-      fc.property(
-        fc.boolean(),
-        fc.boolean(),
-        (wasScanning, hadError) => {
-          const cleanup = jest.fn();
-          const { unmount } = renderHook(() => 
-            useCameraCleanup({ cleanup, wasScanning, hadError })
-          );
-          
-          unmount();
-          
-          // Property: Cleanup should always be called on unmount
-          expect(cleanup).toHaveBeenCalled();
-        }
-      ),
+      fc.property(fc.boolean(), fc.boolean(), (wasScanning, hadError) => {
+        const cleanup = jest.fn();
+        const { unmount } = renderHook(() => useCameraCleanup({ cleanup, wasScanning, hadError }));
+
+        unmount();
+
+        // Property: Cleanup should always be called on unmount
+        expect(cleanup).toHaveBeenCalled();
+      }),
       { numRuns: 100 }
     );
   });
@@ -1701,17 +1686,17 @@ describe('QRCodeScanner Integration', () => {
     const { getByRole, getByTestId } = render(
       <QRCodeScanner onScan={onScan} />
     );
-    
+
     // Wait for camera initialization
     await waitFor(() => {
       expect(getByTestId('camera-view')).toBeInTheDocument();
     });
-    
+
     // Simulate QR code detection
     act(() => {
       simulateQRDetection('GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2H');
     });
-    
+
     // Verify callback
     await waitFor(() => {
       expect(onScan).toHaveBeenCalledWith({
@@ -1722,39 +1707,39 @@ describe('QRCodeScanner Integration', () => {
       });
     });
   });
-  
+
   it('should fall back to manual input on permission denial', async () => {
     mockCameraPermission('denied');
-    
+
     const { getByRole, getByLabelText } = render(
       <QRCodeScanner onScan={jest.fn()} />
     );
-    
+
     // Should show manual input
     await waitFor(() => {
       expect(getByLabelText(/enter address/i)).toBeInTheDocument();
     });
   });
-  
+
   it('should handle retry flow', async () => {
     let attemptCount = 0;
     mockCameraInit(() => {
       attemptCount++;
       if (attemptCount < 2) throw new Error('Init failed');
     });
-    
+
     const { getByRole } = render(
       <QRCodeScanner onScan={jest.fn()} />
     );
-    
+
     // First attempt fails
     await waitFor(() => {
       expect(getByRole('button', { name: /retry/i })).toBeInTheDocument();
     });
-    
+
     // Click retry
     fireEvent.click(getByRole('button', { name: /retry/i }));
-    
+
     // Second attempt succeeds
     await waitFor(() => {
       expect(getByTestId('camera-view')).toBeInTheDocument();
@@ -1770,49 +1755,52 @@ describe('QRCodeScanner E2E', () => {
   it('should complete full user journey: scan -> validate -> callback', async () => {
     const page = await browser.newPage();
     await page.goto('http://localhost:3000/scanner');
-    
+
     // Grant camera permission
     await page.evaluate(() => {
-      navigator.permissions.query({ name: 'camera' }).then(result => {
+      navigator.permissions.query({ name: 'camera' }).then((result) => {
         result.state = 'granted';
       });
     });
-    
+
     // Wait for camera to start
     await page.waitForSelector('[data-testid="camera-view"]');
-    
+
     // Simulate QR code in camera view
     await page.evaluate(() => {
       window.simulateQRCode('GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2H');
     });
-    
+
     // Verify success state
     await page.waitForSelector('[data-testid="success-animation"]');
-    
+
     // Verify callback was triggered
     const callbackData = await page.evaluate(() => window.lastScanResult);
     expect(callbackData.type).toBe('address');
     expect(callbackData.value).toMatch(/^G[A-Z2-7]{55}$/);
   });
-  
+
   it('should handle manual input fallback', async () => {
     const page = await browser.newPage();
     await page.goto('http://localhost:3000/scanner');
-    
+
     // Deny camera permission
     await page.evaluate(() => {
-      navigator.permissions.query({ name: 'camera' }).then(result => {
+      navigator.permissions.query({ name: 'camera' }).then((result) => {
         result.state = 'denied';
       });
     });
-    
+
     // Should show manual input
     await page.waitForSelector('input[name="address"]');
-    
+
     // Enter address
-    await page.type('input[name="address"]', 'GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2H');
+    await page.type(
+      'input[name="address"]',
+      'GBRPYHIL2CI3FNQ4BXLFMNDLFJUNPU2HY3ZMFSHONUCEOASW7QC7OX2H'
+    );
     await page.click('button[type="submit"]');
-    
+
     // Verify success
     await page.waitForSelector('[data-testid="success-animation"]');
   });
@@ -1834,4 +1822,3 @@ describe('QRCodeScanner E2E', () => {
 - Run E2E tests on staging deployment
 - Monitor property test failures for edge cases
 - Track test execution time and optimize slow tests
-
